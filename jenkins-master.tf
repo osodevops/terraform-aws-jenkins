@@ -19,7 +19,7 @@ data "template_file" "jenkins_master_td_template" {
   )
   vars = {
     NAME                       = local.jenkins_master_container_name
-    DOCKER_IMAGE_NAME          = "jnonino/jenkins-master"
+    DOCKER_IMAGE_NAME          = "jenkins/jenkins"
     DOCKER_IMAGE_TAG           = "latest"
     CPU                        = local.jenkins_fargate_cpu_value
     MEMORY                     = local.jenkins_fargate_memory_value

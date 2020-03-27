@@ -19,14 +19,17 @@ data "template_file" "jenkins_master_td_template" {
   )
   vars = {
     NAME                       = local.jenkins_master_container_name
-    DOCKER_IMAGE_NAME          = "jenkins/jenkins"
+    DOCKER_IMAGE_NAME          = "osodevops/docker-jenkins-master"
     DOCKER_IMAGE_TAG           = "latest"
     CPU                        = local.jenkins_fargate_cpu_value
     MEMORY                     = local.jenkins_fargate_memory_value
     CLOUDWATCH_PATH            = module.aws_cw_logs.logs_path
     AWS_REGION                 = var.region
+    JENKINS_URL                = aws_route53_record.load-balancer.fqdn
     JENKINS_CONTAINER_WEB_PORT = local.jenkins_container_web_port
     JENKINS_CONTAINER_SLV_PORT = local.jenkins_container_slave_port
+    JENKINS_ADMIN              = var.jenkins_admin_username
+    JENKINS_PASSWORD           = var.jenkins_admin_password
   }
 }
 
@@ -40,6 +43,9 @@ resource "aws_ecs_task_definition" "jenkins_master_td" {
   memory                   = local.jenkins_fargate_memory_value
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
   task_role_arn            = aws_iam_role.ecs_task_execution_role.arn
+  volume {
+    name = "jenkins_data"
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -47,7 +53,7 @@ resource "aws_ecs_task_definition" "jenkins_master_td" {
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_ecs_service" "jenkins_master_service" {
   name            = "${var.name_preffix}-jenkins-master"
-  depends_on      = [aws_alb_listener.jenkins_master_web_listener]
+  depends_on      = [aws_alb_listener.jenkins_master_web_listener_http]
   cluster         = aws_ecs_cluster.jenkins_cluster.id
   task_definition = aws_ecs_task_definition.jenkins_master_td.arn
   launch_type     = "FARGATE"
@@ -99,15 +105,36 @@ resource "aws_alb_target_group" "jenkins_master_alb_tg" {
 # ---------------------------------------------------------------------------------------------------------------------
 # AWS ALB Listener
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_alb_listener" "jenkins_master_web_listener" {
+resource "aws_alb_listener" "jenkins_master_web_listener_http" {
   load_balancer_arn = aws_alb.jenkins_master_alb.arn
   port              = "80"
   protocol          = "HTTP"
   default_action {
-    target_group_arn = aws_alb_target_group.jenkins_master_alb_tg.arn
-    type             = "forward"
+    type             = "redirect"
+    redirect {
+      port = "443"
+      protocol = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
+  depends_on = ["aws_alb.jenkins_master_alb", "aws_alb_target_group.jenkins_master_alb_tg"]
 }
+
+resource "aws_alb_listener" "jenkins_master_web_listener_https" {
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.jenkins_master_alb_tg.id
+  }
+
+  load_balancer_arn = aws_alb.jenkins_master_alb.id
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS-1-2-Ext-2018-06"
+  certificate_arn   = var.alb_certifcate_arn
+
+  depends_on = ["aws_alb.jenkins_master_alb", "aws_alb_target_group.jenkins_master_alb_tg"]
+}
+
 
 resource "aws_alb_listener" "jenkins_master_slave_listener" {
   load_balancer_arn = aws_alb.jenkins_master_alb.arn

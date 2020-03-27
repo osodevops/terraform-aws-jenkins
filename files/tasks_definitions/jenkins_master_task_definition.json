@@ -4,6 +4,24 @@
         "image": "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}",
         "cpu": ${CPU},
         "memory": ${MEMORY},
+        "environment": [
+            {
+                "Name": "JAVA_OPTS",
+                "Value": "-Djenkins.install.runSetupWizard=false"
+            },
+            {
+                "Name": "JENKINS_URL",
+                "Value": "${JENKINS_URL}"
+            },
+            {
+                "Name": "JENKINS_ADMIN",
+                "Value": "${JENKINS_ADMIN}"
+            },
+            {
+                "Name": "JENKINS_PASSWORD",
+                "Value": "${JENKINS_PASSWORD}"
+            }
+        ],
         "portMappings": [
             {
                 "containerPort": ${JENKINS_CONTAINER_WEB_PORT},
@@ -12,6 +30,12 @@
             {
                 "containerPort": ${JENKINS_CONTAINER_SLV_PORT},
                 "hostPort": ${JENKINS_CONTAINER_SLV_PORT}
+            }
+        ],
+        "mountPoints": [
+            {
+                "containerPath": "/var/jenkins_home",
+                "sourceVolume": "jenkins_data"
             }
         ],
         "logConfiguration": {

@@ -1,3 +1,7 @@
+variable "common_tags" {
+  type = "map"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Misc
 # ---------------------------------------------------------------------------------------------------------------------
@@ -25,11 +29,33 @@ variable "vpc_id" {
 
 variable "public_subnets_ids" {
   description = "List of Public Subnets IDs"
-  type        = list
+  type        = "list"
 }
 
 variable "private_subnets_ids" {
   description = "List of Private Subnets IDs"
-  type        = list
+  type        = "list"
+}
+variable "web_whitelist" {
+  description = "Whitelist of IPs which can connect."
+  type = "list"
+  default = []
+}
+variable "dns_zone_id" {
+  default = ""
+}
+variable "dns_name" {
+  default = "jenkins"
 }
 
+variable "alb_certifcate_arn" {
+  default = ""
+}
+variable "jenkins_admin_password" {
+  description = "REQUIRED: Jenkins Master node username."
+  type = string
+}
+variable "jenkins_admin_username" {
+  description = "REQUIRED: Jenkins Master node password."
+  type = string
+}

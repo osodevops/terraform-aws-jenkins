@@ -25,7 +25,7 @@ data "template_file" "jenkins_master_td_template" {
     MEMORY                     = local.jenkins_fargate_memory_value
     CLOUDWATCH_PATH            = module.aws_cw_logs.logs_path
     AWS_REGION                 = var.region
-    JENKINS_URL                = aws_route53_record.load-balancer.fqdn
+    JENKINS_URL                = local.jenkins_url
     JENKINS_CONTAINER_WEB_PORT = local.jenkins_container_web_port
     JENKINS_CONTAINER_SLV_PORT = local.jenkins_container_slave_port
     JENKINS_ADMIN              = var.jenkins_admin_username
@@ -94,7 +94,7 @@ resource "aws_alb_target_group" "jenkins_master_alb_tg" {
   vpc_id      = var.vpc_id
   target_type = "ip"
   health_check {
-    path = "/"
+    path = "/login"
     port = local.jenkins_container_web_port
   }
   tags = {

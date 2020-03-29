@@ -17,12 +17,6 @@ resource "aws_security_group" "alb_sg" {
     to_port     = 443
     cidr_blocks = flatten(var.web_whitelist)
   }
-  ingress {
-    protocol    = "tcp"
-    from_port   = 50000
-    to_port     = 50000
-    self = true
-  }
   egress {
     protocol    = "-1"
     from_port   = 0

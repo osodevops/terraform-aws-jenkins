@@ -1,6 +1,24 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # AWS ECS Task Execution Role
 # ---------------------------------------------------------------------------------------------------------------------
+data "aws_iam_policy_document" "jenkins_ecs_secrets_manager" {
+  statement {
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:ListSecrets",
+      "kms:Decrypt"
+    ]
+    resources = ["*"]
+    effect    = "Allow"
+  }
+}
+
+resource "aws_iam_policy" "jenkins_secrets_policy" {
+  name       = "${var.name_preffix}-jenkins-ecs-task-secredts-manager-role"
+  description = "Allows Jenknis ECS task to read secrets manager for dynamic credentials store."
+  policy      = data.aws_iam_policy_document.jenkins_ecs_secrets_manager.json
+}
+
 resource "aws_iam_role" "ecs_task_execution_role" {
   name               = "${var.name_preffix}-jenkins-ecs-task-execution-role"
   assume_role_policy = file("${path.module}/files/iam/ecs_task_execution_iam_role.json")
@@ -11,6 +29,10 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_attach
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy_attachment" "jenkins_secrets_role_policy_attach" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = aws_iam_policy.jenkins_secrets_policy.arn
+}
 # ---------------------------------------------------------------------------------------------------------------------
 # AWS ECS Auto Scale Role
 # ---------------------------------------------------------------------------------------------------------------------

@@ -16,6 +16,7 @@ locals {
   jenkins_container_slave_port       = 50000
   jenkins_fargate_cpu_value          = 2048 # 2 vCPU  - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html#fargate-task-defs
   jenkins_fargate_memory_value       = 4096 # 4 GB    - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html#fargate-task-defs
+  jenkins_url                        = "https://${aws_route53_record.load-balancer.fqdn}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

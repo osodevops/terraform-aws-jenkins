@@ -33,6 +33,7 @@ resource "aws_iam_role_policy_attachment" "jenkins_secrets_role_policy_attach" {
   role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = aws_iam_policy.jenkins_secrets_policy.arn
 }
+
 # ---------------------------------------------------------------------------------------------------------------------
 # AWS ECS Auto Scale Role
 # ---------------------------------------------------------------------------------------------------------------------
@@ -49,3 +50,16 @@ resource "aws_iam_role_policy" "ecs_autoscale_role_policy" {
   )
 }
 
+#
+# Jenkins Terraforming Role
+#
+resource "aws_iam_role" "jenkins_local_admin_role" {
+  name               = "Jenkins-Local-Admin"
+  assume_role_policy = "${data.aws_iam_policy_document.forrole.json}"
+}
+resource "aws_iam_policy" "local_admin" {
+  name        = "JenkinsAdmin"
+  description = "Role which provides most of the access to one given AWS account"
+
+  policy = "${data.aws_iam_policy_document.local_admin.json}"
+}

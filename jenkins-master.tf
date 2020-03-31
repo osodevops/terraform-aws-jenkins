@@ -30,6 +30,10 @@ data "template_file" "jenkins_master_td_template" {
     JENKINS_CONTAINER_SLV_PORT = local.jenkins_container_slave_port
     JENKINS_ADMIN              = var.jenkins_admin_username
     JENKINS_PASSWORD           = var.jenkins_admin_password
+    JENKINS_CLUSTER            = aws_ecs_cluster.jenkins_cluster.arn
+    FARGATE_SUBNET             =  var.private_subnets_ids[0]
+    FARGATE_SECURITY_GROUP     = aws_security_group.ecs_tasks_sg.id
+    LOAD_BALANCER_URL          = "https://${aws_alb.jenkins_master_alb.dns_name}"
   }
 }
 

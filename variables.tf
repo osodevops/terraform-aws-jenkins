@@ -59,3 +59,9 @@ variable "jenkins_admin_username" {
   description = "REQUIRED: Jenkins Master node password."
   type = string
 }
+
+variable "github_dsl_url" {
+  description = "Githuhb URL of project Jenkis is to pull for DSL seed."
+  default = ""
+  type = string
+}

@@ -20,6 +20,14 @@
             {
                 "Name": "JENKINS_PASSWORD",
                 "Value": "${JENKINS_PASSWORD}"
+            },
+            {
+                "name": "FARGATE_SUBNET",
+                "value": "${FARGATE_SUBNET}"
+            },
+            {
+                "name": "LOAD_BALANCER_URL",
+                "value": "${LOAD_BALANCER_URL}"
             }
         ],
         "portMappings": [

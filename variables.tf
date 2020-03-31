@@ -65,3 +65,6 @@ variable "github_dsl_url" {
   default = ""
   type = string
 }
+variable "dsl_branch" {
+  default = ""
+}

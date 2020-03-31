@@ -25,6 +25,7 @@ data "template_file" "jenkins_master_td_template" {
     MEMORY                     = local.jenkins_fargate_memory_value
     CLOUDWATCH_PATH            = module.aws_cw_logs.logs_path
     AWS_REGION                 = var.region
+    AWS_ACCOUNT_ID             = data.aws_caller_identity.current.account_id
     JENKINS_URL                = local.jenkins_url
     JENKINS_CONTAINER_WEB_PORT = local.jenkins_container_web_port
     JENKINS_CONTAINER_SLV_PORT = local.jenkins_container_slave_port
@@ -34,6 +35,8 @@ data "template_file" "jenkins_master_td_template" {
     FARGATE_SUBNET             =  var.private_subnets_ids[0]
     FARGATE_SECURITY_GROUP     = aws_security_group.ecs_tasks_sg.id
     LOAD_BALANCER_URL          = "https://${aws_alb.jenkins_master_alb.dns_name}"
+    DSL_BRANCH                 = var.dsl_branch
+    GITHUB_REPO_URL            = var.github_dsl_url
   }
 }
 
@@ -49,6 +52,17 @@ resource "aws_ecs_task_definition" "jenkins_master_td" {
   task_role_arn            = aws_iam_role.ecs_task_execution_role.arn
   volume {
     name = "jenkins_data"
+  }
+  volume {
+    name = "docker_bin"
+  }
+
+  volume {
+    name = "docker_run"
+  }
+
+  volume {
+    name = "docker_sock"
   }
 }
 
@@ -71,6 +85,11 @@ resource "aws_ecs_service" "jenkins_master_service" {
     target_group_arn = aws_alb_target_group.jenkins_master_alb_tg.arn
     container_name   = local.jenkins_master_container_name
     container_port   = local.jenkins_container_web_port
+  }
+  load_balancer {
+    target_group_arn = aws_alb_target_group.jenkins_api.arn
+    container_name = local.jenkins_master_container_name
+    container_port = 50000
   }
 }
 
@@ -105,7 +124,27 @@ resource "aws_alb_target_group" "jenkins_master_alb_tg" {
     Name = "${var.name_preffix}-jenkins-master-alb-tg"
   }
 }
+resource "aws_alb_target_group" "jenkins_api" {
+  name        = "${var.name_preffix}-jenkins-slave-group-${random_string.alb_prefix.result}"
+  port        = 50000
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+  stickiness {
+    enabled = false
+    type = "lb_cookie"
+  }
 
+  tags = merge(
+  var.common_tags,
+    map("Name", "${var.name_preffix}-jenkins-slave-group-target-group")
+  )
+}
+resource "random_string" "alb_prefix" {
+  length  = 4
+  upper   = false
+  special = false
+}
 # ---------------------------------------------------------------------------------------------------------------------
 # AWS ALB Listener
 # ---------------------------------------------------------------------------------------------------------------------
@@ -139,15 +178,15 @@ resource "aws_alb_listener" "jenkins_master_web_listener_https" {
   depends_on = ["aws_alb.jenkins_master_alb", "aws_alb_target_group.jenkins_master_alb_tg"]
 }
 
-
 resource "aws_alb_listener" "jenkins_master_slave_listener" {
+  default_action {
+    target_group_arn = aws_alb_target_group.jenkins_api.arn
+    type             = "forward"
+  }
+
   load_balancer_arn = aws_alb.jenkins_master_alb.arn
   port              = local.jenkins_container_slave_port
   protocol          = "HTTP"
-  default_action {
-    target_group_arn = aws_alb_target_group.jenkins_master_alb_tg.arn
-    type             = "forward"
-  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

@@ -28,6 +28,14 @@
             {
                 "name": "LOAD_BALANCER_URL",
                 "value": "${LOAD_BALANCER_URL}"
+            },
+            {
+                "name": "DSL_BRANCH",
+                "value": "${DSL_BRANCH}"
+            },
+            {
+                "name": "GITHUB_REPO_URL",
+                "value": "${GITHUB_REPO_URL}"
             }
         ],
         "portMappings": [
@@ -44,6 +52,18 @@
             {
                 "containerPath": "/var/jenkins_home",
                 "sourceVolume": "jenkins_data"
+            },
+            {
+                "sourceVolume": "docker_bin",
+                "containerPath": "/usr/bin/docker"
+            },
+            {
+                "sourceVolume": "docker_run",
+                "containerPath": "/var/run/docker"
+            },
+            {
+                "sourceVolume": "docker_sock",
+                "containerPath": "/var/run/docker.sock"
             }
         ],
         "logConfiguration": {

@@ -92,7 +92,7 @@ resource "aws_ecs_task_definition" "jenkins_master_td" {
 }
 
 resource "aws_ecs_task_definition" "jenkins_slave" {
-  family                   = "${var.name_preffix}-jenkins-master"
+  family                   = "${var.name_preffix}-jenkins-slave"
   container_definitions    = data.template_file.jenkins_slave_td_template.rendered
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
@@ -139,12 +139,12 @@ resource "aws_ecs_service" "jenkins_slave_service" {
   desired_count   = 1
   network_configuration {
     security_groups  = [aws_security_group.ecs_tasks_sg.id]
-    subnets          = var.private_subnets_ids
+    subnets          = var.public_subnets_ids
     assign_public_ip = true
   }
   load_balancer {
     target_group_arn = aws_alb_target_group.jenkins_api.arn
-    container_name = local.jenkins_master_container_name
+    container_name = local.jenkins_slave_container_name
     container_port = 50000
   }
 }

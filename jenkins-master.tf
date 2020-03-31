@@ -2,9 +2,17 @@
 # AWS Cloudwatch
 # ---------------------------------------------------------------------------------------------------------------------
 module "aws_cw_logs" {
-  source  = "cn-terraform/cloudwatch-logs/aws"
-  version = "1.0.3"
+  source                      = "cn-terraform/cloudwatch-logs/aws"
+  version                     = "1.0.3"
   logs_path                   = local.jenkins_master_cloudwatch_log_path
+  profile                     = var.profile
+  region                      = var.region
+}
+
+module "aws_cw_logs_slave" {
+  source                      = "cn-terraform/cloudwatch-logs/aws"
+  version                     = "1.0.3"
+  logs_path                   = local.jenkins_slave_cloudwatch_log_path
   profile                     = var.profile
   region                      = var.region
 }
@@ -40,6 +48,23 @@ data "template_file" "jenkins_master_td_template" {
   }
 }
 
+data "template_file" "jenkins_slave_td_template" {
+  template = file(
+    "${path.module}/files/tasks_definitions/jenkins_slave_task_definition.json",
+  )
+  vars = {
+    NAME                       = local.jenkins_slave_container_name
+    DOCKER_IMAGE_NAME          = "osodevops/docker-jenkins-slave"
+    DOCKER_IMAGE_TAG           = "latest"
+    CPU                        = local.jenkins_fargate_slave_cpu_value
+    MEMORY                     = local.jenkins_fargate_slave_memory_value
+    CLOUDWATCH_PATH            = module.aws_cw_logs_slave.logs_path
+    AWS_REGION                 = var.region
+    AWS_ACCOUNT_ID             = data.aws_caller_identity.current.account_id
+    JENKINS_CONTAINER_SLV_PORT = local.jenkins_container_slave_port
+  }
+}
+
 # Task Definition
 resource "aws_ecs_task_definition" "jenkins_master_td" {
   family                   = "${var.name_preffix}-jenkins-master"
@@ -66,6 +91,18 @@ resource "aws_ecs_task_definition" "jenkins_master_td" {
   }
 }
 
+resource "aws_ecs_task_definition" "jenkins_slave" {
+  family                   = "${var.name_preffix}-jenkins-master"
+  container_definitions    = data.template_file.jenkins_slave_td_template.rendered
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = local.jenkins_fargate_slave_cpu_value
+  memory                   = local.jenkins_fargate_slave_memory_value
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_execution_role.arn
+}
+
+
 # ---------------------------------------------------------------------------------------------------------------------
 # AWS ECS Service
 # ---------------------------------------------------------------------------------------------------------------------
@@ -85,6 +122,25 @@ resource "aws_ecs_service" "jenkins_master_service" {
     target_group_arn = aws_alb_target_group.jenkins_master_alb_tg.arn
     container_name   = local.jenkins_master_container_name
     container_port   = local.jenkins_container_web_port
+  }
+  load_balancer {
+    target_group_arn = aws_alb_target_group.jenkins_api.arn
+    container_name = local.jenkins_master_container_name
+    container_port = 50000
+  }
+}
+
+resource "aws_ecs_service" "jenkins_slave_service" {
+  name            = "${var.name_preffix}-jenkins-slave"
+  depends_on      = [aws_alb_listener.jenkins_master_slave_listener]
+  cluster         = aws_ecs_cluster.jenkins_cluster.id
+  task_definition = aws_ecs_task_definition.jenkins_slave.arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
+  network_configuration {
+    security_groups  = [aws_security_group.ecs_tasks_sg.id]
+    subnets          = var.private_subnets_ids
+    assign_public_ip = true
   }
   load_balancer {
     target_group_arn = aws_alb_target_group.jenkins_api.arn

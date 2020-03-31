@@ -1,0 +1,24 @@
+[
+    {
+        "name": "${NAME}",
+        "image": "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}",
+        "cpu": ${CPU},
+        "memory": ${MEMORY},
+        "environment": [],
+        "portMappings": [
+            {
+                "containerPort": ${JENKINS_CONTAINER_SLV_PORT},
+                "hostPort": ${JENKINS_CONTAINER_SLV_PORT}
+            }
+        ],
+        "mountPoints": [],
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+              "awslogs-group": "${CLOUDWATCH_PATH}",
+              "awslogs-region": "${AWS_REGION}",
+              "awslogs-stream-prefix": "ecs"
+            }
+        }
+    }
+]
